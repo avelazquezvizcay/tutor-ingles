@@ -73,10 +73,22 @@ input,select,textarea{background:var(--paper);border:1px solid var(--line);borde
 .err{color:var(--error)}
 .typing{color:var(--muted);font-style:italic}
 
+.quick-options{padding:10px 24px;background:var(--surface);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.quick-label{font-size:.78rem;color:var(--muted);font-weight:600}
+.options-list{display:flex;gap:8px;flex-wrap:wrap}
+.opt-btn{background:var(--surface);border:1.5px solid var(--teal);color:var(--ink);padding:6px 14px;border-radius:99px;font-size:.88rem;font-weight:500;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:6px}
+.opt-btn:hover{background:var(--teal);color:#fff;transform:translateY(-1px)}
+.voice-bar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:8px 24px;background:var(--paper);border-top:1px solid var(--line);font-size:.8rem;color:var(--muted)}
+.voice-toggle{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.voice-toggle input{cursor:pointer}
 .composer{border-top:1px solid var(--line);padding:12px 28px;display:flex;gap:8px;align-items:flex-end;background:var(--paper)}
 .composer textarea{flex:1;resize:none;min-height:46px;max-height:180px}
-.icon{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.1rem}
+.icon{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:1.1rem;cursor:pointer}
 .icon.on{background:var(--error);color:#fff;border-color:var(--error)}
+.composer.voice-only textarea, .composer.voice-only #send{display:none}
+.composer.voice-only #mic{flex:1;height:50px;border-radius:25px;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:none;font-size:.95rem;font-weight:600}
+.composer.voice-only #mic.on{background:var(--error);animation:pulse 1s infinite alternate}
+@keyframes pulse{0%{transform:scale(1)}100%{transform:scale(1.02)}}
 .auto{font-size:.8rem;color:var(--muted);display:flex;gap:6px;align-items:center;white-space:nowrap}
 
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);max-width:560px;width:92%;padding:22px}
@@ -122,7 +134,7 @@ dialog small{color:var(--muted);display:block;margin-bottom:12px}
   .modes{flex-direction:row;overflow-x:auto;gap:6px}
   .mode{white-space:nowrap;border:1px solid var(--line)}
   .side-foot{flex-direction:row;gap:14px;margin:0}
-  .head,.chat,.composer{padding-left:14px;padding-right:14px}
+  .head,.chat,.composer,.quick-options,.voice-bar{padding-left:14px;padding-right:14px}
   .app{height:auto;min-height:100%}
   main{height:calc(100vh - 170px)}
 }
@@ -153,7 +165,21 @@ dialog small{color:var(--muted);display:block;margin-bottom:12px}
       <div class="setup" id="setup"></div>
     </div>
     <div class="chat" id="chat" aria-live="polite"></div>
-    <div class="composer">
+    <div id="quickOptions" class="quick-options" hidden>
+      <div class="quick-label">⚡ Opciones para responder con un clic (o escribe / habla por el micro 🎙️):</div>
+      <div id="quickList" class="options-list"></div>
+    </div>
+    <div class="voice-bar">
+      <label class="voice-toggle" title="Responde hablando en inglés para evaluar tu pronunciación">
+        <input type="checkbox" id="voiceOnlyToggle">
+        <span>🎙️ <b>Modo solo voz</b> (responder hablando)</span>
+      </label>
+      <label class="voice-toggle" title="El profesor lee sus explicaciones y preguntas en voz alta">
+        <input type="checkbox" id="autoVoiceToggle">
+        <span>🔊 <b>Voz del tutor automática</b></span>
+      </label>
+    </div>
+    <div class="composer" id="composer">
       <button class="icon" id="mic" title="Hablar en inglés" aria-label="Hablar">🎤</button>
       <textarea id="input" rows="1" placeholder="Escribe tu respuesta…"></textarea>
       <button class="btn" id="send">Enviar</button>
@@ -370,7 +396,7 @@ let current = state.mode || "test";
 let busy = false;
 
 function load(){
-  const base = {settings:{provider:"gemini",key:"",model:PROVIDERS.gemini.model,url:"",autoSpeak:true,voiceEngine:"gemini",ttsKey:"",ttsModel:"gemini-3.8-flash-lite-tts",ttsVoice:"Kore"},
+  const base = {settings:{provider:"gemini",key:"",model:PROVIDERS.gemini.model,url:"",autoSpeak:true,voiceOnly:false,voiceEngine:"gemini",ttsKey:"",ttsModel:"gemini-3.8-flash-lite-tts",ttsVoice:"Kore"},
     profile:{level:"",step:1,history:[],lastActive:0,notice:"",errors:[],vocab:[],plan:"",goal:"",minutes:"",weeks:"",cards:{},days:[],today:null},chats:{},fields:{},mode:"today"};
   try{
     const s = JSON.parse(localStorage.getItem(KEY));
@@ -405,6 +431,7 @@ function systemPrompt(){
 Nivel actual del alumno: ${p.level||"desconocido"}, paso ${p.step||1} de 3 (1 = base del nivel, 3 = casi listo para el siguiente). Ajusta TODO (preguntas, vocabulario, velocidad de conversación, gramática) a ese nivel y paso, con retos ligeramente por encima para que avance. Objetivo: ${p.goal||"no indicado"}. Fallos frecuentes: ${errs}.
 ${p.plan?"Resumen de su plan: "+p.plan.slice(0,600):""}
 Reglas: haz una sola pregunta o ejercicio a la vez y espera la respuesta. Respuestas breves y claras. Usa **negritas** para la forma correcta.
+Si el mensaje del alumno incluye "🎙 [Respuesta por voz]" o "🎙 [Audio/Voz]" (respuesta hablada): además de evaluar si la opción o respuesta es correcta, dale un consejo amigable sobre pronunciación y fonética según lo que dijo (por ejemplo: sonido de la 's' final, terminaciones -ed, vocales cortas vs largas, etc.).
 Al final de CADA respuesta añade exactamente una línea oculta con este formato JSON (sin texto después):
 <<<DATA {"nivel":"","paso":0,"acierto":null,"errores":[],"vocab":[],"plan":""}>>>
 - "nivel": solo si acabas de determinar o reevaluar su nivel (A1..C2), si no "". "paso": 1, 2 o 3 junto con el nivel; 0 si no.
@@ -587,7 +614,10 @@ function renderChat(){
   const m = modes().find(x=>x.id===current) || modes()[0];
   const chat = state.chats[current]||[];
   const c = $("chat"); c.innerHTML="";
-  document.querySelector(".composer").style.display = m.custom ? "none" : "";
+  const comp = $("composer"), qBox = $("quickOptions"), vBar = document.querySelector(".voice-bar");
+  if(comp) comp.style.display = m.custom ? "none" : "";
+  if(qBox) qBox.style.display = m.custom ? "none" : "";
+  if(vBar) vBar.style.display = m.custom ? "none" : "";
   if(m.custom){ m.custom==="today" ? renderToday(c) : renderCards(c); return; }
   if(!chat.length){
     c.innerHTML = `<div class="empty">${m.build({},state.profile)===null ? "Pega tu texto abajo y pulsa Enviar." : "Pulsa «Empezar» cuando estés listo."}</div>`;
@@ -611,7 +641,9 @@ function renderChat(){
   });
   if(busy){ const t=document.createElement("div"); t.className="msg ai typing"; t.textContent="Pensando…"; c.appendChild(t); }
   c.scrollTop = c.scrollHeight;
-  $("input").placeholder = m.placeholder || "Escribe tu respuesta…";
+  $("input").placeholder = state.settings.voiceOnly ? "Modo solo voz: presiona el micro abajo y habla en inglés…" : (m.placeholder || "Escribe tu respuesta…");
+  updateQuickOptions();
+  syncVoiceModeUI();
 }
 
 function renderLevel(){
@@ -659,8 +691,8 @@ async function send(text){
     const clean = extractData(raw);
     chat.push({role:"assistant",content:clean});
     recordActivity(current);
-    if(current==="talk" && state.settings.autoSpeak) speak(clean);
-    if(current==="listen"){ const a = [...clean.matchAll(/<<<AUDIO\s*([\s\S]*?)>>>/g)].pop(); if(a) speak(a[1],{raw:true}); }
+    if((state.settings.autoSpeak || state.settings.voiceOnly) && current!=="listen") speak(clean);
+    else if(current==="listen"){ const a = [...clean.matchAll(/<<<AUDIO\s*([\s\S]*?)>>>/g)].pop(); if(a) speak(a[1],{raw:true}); }
   }catch(e){
     busy=false;
     renderChat();
@@ -978,29 +1010,131 @@ function player(text){
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec=null;
 if(!SR){ $("mic").title="Tu navegador no permite dictado (usa Chrome)"; $("mic").disabled=true; $("mic").style.opacity=.4; }
+
+function syncVoiceModeUI(){
+  const vo = !!state.settings.voiceOnly;
+  const comp = $("composer");
+  if(comp) comp.classList.toggle("voice-only", vo);
+  if($("voiceOnlyToggle")) $("voiceOnlyToggle").checked = vo;
+  if($("autoVoiceToggle")) $("autoVoiceToggle").checked = !!state.settings.autoSpeak;
+  const mic = $("mic");
+  if(mic){
+    if(vo){
+      mic.innerHTML = rec ? "⏹️ <b>Escuchando tu voz...</b> (Toca para enviar)" : "🎤 <b>Toca para responder hablando</b> (en inglés)";
+      mic.title = "Toca para responder en inglés con tu voz";
+    } else {
+      mic.innerHTML = "🎤";
+      mic.title = "Hablar en inglés";
+    }
+  }
+}
+
+if($("voiceOnlyToggle")){
+  $("voiceOnlyToggle").onchange = e => {
+    state.settings.voiceOnly = e.target.checked;
+    save();
+    syncVoiceModeUI();
+  };
+}
+if($("autoVoiceToggle")){
+  $("autoVoiceToggle").onchange = e => {
+    state.settings.autoSpeak = e.target.checked;
+    save();
+  };
+}
+
 $("mic").onclick=()=>{
+  if(!SR){ alert("Tu navegador no soporta reconocimiento de voz. Te recomendamos usar Google Chrome para hablar."); return; }
   if(rec){ rec.stop(); return; }
-  rec = new SR(); rec.lang="en-US"; rec.interimResults=true;
+  rec = new SR();
+  rec.lang = "en-US";
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
   const start = $("input").value;
-  rec.onresult=e=>{ $("input").value = (start+" "+Array.from(e.results).map(r=>r[0].transcript).join("")).trim(); };
-  rec.onend=()=>{ rec=null; $("mic").classList.remove("on"); };
-  rec.onerror=()=>{ rec=null; $("mic").classList.remove("on"); };
-  $("mic").classList.add("on"); rec.start();
+  rec.onresult = e => {
+    const tr = Array.from(e.results).map(r=>r[0].transcript).join("");
+    $("input").value = (start ? start+" " : "") + tr;
+  };
+  rec.onend = () => {
+    rec = null;
+    $("mic").classList.remove("on");
+    syncVoiceModeUI();
+    if(state.settings.voiceOnly){
+      const val = $("input").value.trim();
+      if(val){
+        $("input").value = "";
+        send(`🎙 [Respuesta por voz]: ${val}`);
+      }
+    }
+  };
+  rec.onerror = e => {
+    console.warn("SpeechRecognition error:", e);
+    rec = null;
+    $("mic").classList.remove("on");
+    syncVoiceModeUI();
+  };
+  $("mic").classList.add("on");
+  syncVoiceModeUI();
+  rec.start();
 };
+
+function updateQuickOptions(){
+  const box = $("quickOptions");
+  const list = $("quickList");
+  if(!box || !list) return;
+  const m = modes().find(x=>x.id===current) || modes()[0];
+  if(m.custom){ box.hidden = true; return; }
+  const chat = state.chats[current] || [];
+  if(!chat.length || busy){ box.hidden = true; return; }
+  const last = chat[chat.length - 1];
+  if(last.role !== "assistant"){ box.hidden = true; return; }
+
+  const lines = last.content.split("\n");
+  const opts = [];
+  for(const l of lines){
+    const cleanL = l.trim();
+    const match = cleanL.match(/^[*_]?([a-dA-D1-4])[).]\s*[*_]?\s*(.+)/);
+    if(match){
+      const letter = match[1].toLowerCase();
+      const text = match[2].replace(/[*_]/g, "").trim();
+      opts.push({ letter, text, full: `${letter}) ${text}` });
+    }
+  }
+  if(opts.length >= 2){
+    box.hidden = false;
+    list.innerHTML = "";
+    opts.forEach(o => {
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.textContent = `${o.letter}) ${o.text}`;
+      btn.title = "Haz clic para responder o dilo por el micro";
+      btn.onclick = () => {
+        if(state.settings.voiceOnly){
+          send(`🎙 [Respuesta por voz]: ${o.full}`);
+        } else {
+          send(o.full);
+        }
+      };
+      list.appendChild(btn);
+    });
+  } else {
+    box.hidden = true;
+  }
+}
 
 // Ajustes
 function fillSettings(){
   const s=state.settings;
-  $("sProvider").value=s.provider; $("sKey").value=s.key; $("sModel").value=s.model||"gemini-2.5-flash"; $("sUrl").value=s.url||PROVIDERS[s.provider].url||"";
+  $("sProvider").value=s.provider; $("sKey").value=s.key; $("sModel").value=s.model||"gemini-3.5-flash"; $("sUrl").value=s.url||PROVIDERS[s.provider].url||"";
   $("sAuto").checked=s.autoSpeak;
   syncModelPreset();
   syncProvider(false);
-  $("sVoiceEngine").value=s.voiceEngine||"gemini"; $("sTtsKey").value=s.ttsKey||""; $("sTtsModel").value=s.ttsModel||"gemini-2.5-flash"; $("sTtsVoice").value=s.ttsVoice||"Kore";
+  $("sVoiceEngine").value=s.voiceEngine||"gemini"; $("sTtsKey").value=s.ttsKey||""; $("sTtsModel").value=s.ttsModel||"gemini-3.8-flash-lite-tts"; $("sTtsVoice").value=s.ttsVoice||"Kore";
   syncVoice();
 }
 function syncModelPreset(){
   const val = $("sModel").value.trim();
-  const opts = ["gemini-2.5-flash","gemini-2.0-flash","gemini-1.5-flash","gemini-1.5-pro"];
+  const opts = ["gemini-3.5-flash","gemini-3.1-flash-lite","gemini-3.8-flash","gemini-3.7-flash"];
   $("sModelPreset").value = opts.includes(val) ? val : "custom";
 }
 $("sModelPreset").onchange=()=>{
@@ -1028,9 +1162,9 @@ $("sTest").onclick=async ()=>{
 $("openSettings").onclick=()=>{ fillSettings(); $("settings").showModal(); };
 $("sCancel").onclick=()=>$("settings").close();
 $("sSave").onclick=()=>{
-  Object.assign(state.settings,{provider:$("sProvider").value,key:$("sKey").value.trim(),model:$("sModel").value.trim()||"gemini-2.5-flash",url:$("sUrl").value.trim(),autoSpeak:$("sAuto").checked,
-    voiceEngine:$("sVoiceEngine").value,ttsKey:$("sTtsKey").value.trim(),ttsModel:$("sTtsModel").value.trim()||"gemini-2.5-flash",ttsVoice:$("sTtsVoice").value});
-  save(); $("settings").close();
+  Object.assign(state.settings,{provider:$("sProvider").value,key:$("sKey").value.trim(),model:$("sModel").value.trim()||"gemini-3.5-flash",url:$("sUrl").value.trim(),autoSpeak:$("sAuto").checked,
+    voiceEngine:$("sVoiceEngine").value,ttsKey:$("sTtsKey").value.trim(),ttsModel:$("sTtsModel").value.trim()||"gemini-3.8-flash-lite-tts",ttsVoice:$("sTtsVoice").value});
+  save(); syncVoiceModeUI(); $("settings").close();
 };
 
 // Progreso
