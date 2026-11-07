@@ -323,6 +323,60 @@ Cuando recibas mi grabación: dime qué palabras sonaron bien y cuáles no, cóm
   {id:"vocab",name:"Vocabulario",desc:"Las 20 palabras y expresiones que más vas a necesitar, con ejemplo. Luego te las pregunto.",
    fields:[{id:"sit",label:"Situación",ph:"un viaje en aeropuerto"}],
    build:v=>`Dame las 20 palabras y expresiones que más voy a necesitar para ${v.sit||"el día a día"}, con una frase de ejemplo cada una y su traducción. Cuando te diga "listo", pregúntamelas de una en una en otro orden.`},
+  {id:"situations",name:"Situaciones reales",desc:"Estilo Open English: resuelve casos de viajes, trabajo y vida cotidiana formulando tu respuesta.",
+   fields:[{id:"theme",label:"Ámbito o contexto",ph:"aeropuerto, restaurante, trabajo, reclamo, hotel..."}],
+   build:v=>`Vamos a practicar situaciones de la vida real estilo academia (Open English / Centro Electrónico de Idiomas).
+Ámbito o contexto: ${v.theme||"situaciones cotidianas, viajes y trabajo"}.
+Reglas:
+- Plantea una situación realista y detallada en español (ejemplo: migración en el aeropuerto, un cobro indebido, solicitar algo al jefe en el trabajo, devolver un producto, resolver un malentendido en un hotel).
+- Dame un objetivo claro: lo que debo lograr o responder en inglés.
+- No me des opciones a, b, c: yo debo FORMULAR mi propia respuesta en inglés (escribiendo o hablando por el micrófono).
+- Longitud según mi nivel: para A1-A2 una frase clara; para B1-B2 dos o tres frases con cortesía; para C1 argumentación completa.
+- Cuando responda: evalúa si logré el objetivo, corrige mis errores con la forma más natural que usaría un nativo (explicando en español), y califica del 1 al 10 antes de pasar a la siguiente situación. Empieza con la primera situación.`},
+  {id:"writing",name:"Taller de redacción",desc:"Redacciones progresivas estilo academia: correos, ensayos y anécdotas con conectores a tu nivel.",
+   fields:[{id:"type",label:"Tipo de texto",ph:"correo formal, reseña, queja, anécdota, opinión..."}],
+   build:v=>`Vamos a hacer un taller de redacción (writing) progresivo a mi nivel (${state.profile.level||"B1"}).
+Tipo de texto preferido: ${v.type||"correos, anécdotas personales, opiniones o reseñas"}.
+Reglas:
+- Dame un reto de redacción claro en español con:
+  1) El tema o consigna de la redacción.
+  2) Longitud recomendada (ej: 40-60 palabras para B1, 80-120 palabras para B2).
+  3) 3 conectores o expresiones en inglés que debo intentar incluir (ej: however, although, in my opinion, furthermore).
+- Espera a que yo redacte y envíe mi texto completo.
+- Cuando envíes tu revisión:
+  1) Analiza mi texto destacando lo positivo y la fluidez.
+  2) Marca los errores con corrección detallada en español.
+  3) Muestra una "Versión nativa pulida" de cómo lo redactaría un angloparlante fluido.
+  4) Dame un reto de redacción nuevo. Empieza con el primer ejercicio.`},
+  {id:"exam_oral",name:"Examen oral",desc:"Evaluación oficial 100% hablada (speaking): 5 situaciones de tu nivel para calificar tu fluidez y pronunciación.",
+   fields:[],
+   build:(v,p)=>`Vamos a realizar mi EXAMEN ORAL oficial de inglés para mi nivel ${p.level||"B1"}, paso ${p.step||1} de 3 (estilo Open English / Centro Electrónico de Idiomas).
+Reglas del examen oral:
+- Consta de 5 preguntas o situaciones de la vida real, de una en una.
+- Son situaciones abiertas que exigen hablar en inglés (sin opciones a, b, c).
+- Espera a que yo responda con mi voz/audio en cada una.
+- Al final de las 5 preguntas: entrega mi Boletín Oficial de Speaking:
+  1) Calificación del 1 al 10.
+  2) Fluidez y vocabulario aplicado.
+  3) Evaluación fonética y pronunciación (sonidos a mejorar).
+  4) Veredicto: si saco 8 o más, indícalo en DATA con acierto true y avanza de paso/nivel.
+Empieza ahora con la Pregunta 1 de 5 del Examen Oral.`},
+  {id:"exam_written",name:"Examen escrito",desc:"Evaluación formal escrita: gramática de tu nivel, formulación de situaciones y redacción con conectores.",
+   fields:[],
+   build:(v,p)=>`Vamos a realizar mi EXAMEN ESCRITO oficial de inglés para mi nivel ${p.level||"B1"}, paso ${p.step||1} de 3 (estilo Open English / Centro Electrónico de Idiomas).
+Reglas del examen escrito:
+- Consta de 4 secciones prácticas, de una en una:
+  1) Gramática de mi nivel (transformación de oraciones y estructuras clave).
+  2) Formulación de respuesta ante una situación real (aeropuerto, trabajo, reclamo).
+  3) Mini-redacción guiada con 3 conectores obligatorios.
+  4) Detección y corrección de errores en un párrafo.
+- Espera mi respuesta antes de pasar a la siguiente sección.
+- Al final de las 4 secciones: entrega mi Boletín Oficial de Examen Escrito:
+  1) Nota final del 1 al 10.
+  2) Desglose por áreas (Gramática, Situaciones, Redacción).
+  3) Puntos a reforzar.
+  4) Veredicto: si saco 8 o más, pon acierto true en DATA y avanza de paso/nivel.
+Empieza ahora con la Sección 1 de 4 del Examen Escrito.`},
   {id:"cards",name:"Tarjetas",desc:"Repaso inteligente de tus palabras: cada una vuelve justo antes de que la olvides.",custom:"cards",fields:[],build:()=>null},
   {id:"fix",name:"Corregir mi texto",desc:"Pega algo que hayas escrito. Te marco los errores con pistas, sin darte la versión buena.",
    fields:[], build:()=>null, placeholder:"Pega aquí tu texto en inglés…"},
@@ -355,6 +409,18 @@ const KID_MODES = [
   {id:"words",name:"Palabras nuevas",desc:"8 palabras con dibujo y luego un mini juego para recordarlas.",
    fields:[{id:"topic",label:"Tema",ph:"la granja, la escuela, la playa"}],
    build:v=>`Enséñame 8 palabras en inglés sobre ${v.topic||"la casa"}, cada una con un emoji, cómo se dice en español y una frase cortita de ejemplo. Después pregúntamelas de una en una en otro orden como un juego.`},
+  {id:"situations",name:"Misiones y retos",desc:"Resuelve situaciones divertidas en inglés como pedir un helado o ayudar a un amigo.",
+   fields:[{id:"theme",label:"Lugar",ph:"parque, zoológico, tienda de juguetes..."}],
+   build:v=>`¡Vamos a jugar a misiones en inglés! Tema: ${v.theme||"la ciudad o el parque"}. Plantéame una situación divertida y corta con emojis donde yo tenga que decir algo en inglés para resolverla (sin opciones a,b,c). Cuando responda, dime cómo lo hice, dame estrellas ⭐ y pasa a la siguiente misión.`},
+  {id:"writing",name:"Escribir historias",desc:"Crea pequeñas historias y cartas cortitas en inglés con emojis.",
+   fields:[{id:"topic",label:"Tema",ph:"mi mascota, un viaje mágico, superhéroes..."}],
+   build:v=>`Vamos a escribir pequeñas historias en inglés sobre ${v.topic||"mi animal favorito"}. Dame una idea para escribir de 2 a 4 frases en inglés con emojis y 2 palabras clave que deba usar. Cuando te la envíe, felicítame, corrígeme con cariño si algo falló y dame otra idea para escribir.`},
+  {id:"exam_oral",name:"Gran reto de hablar ⭐",desc:"Demuestra cuánto sabes hablando en inglés para ganar la medalla de oro.",
+   fields:[],
+   build:()=>"¡Vamos a hacer el gran reto oral de inglés! Hazme 4 retos hablados divertidos con emojis, de uno en uno. Al final dame mi nota con estrellas ⭐ (de 1 a 10) y un diploma con emojis. Empieza con el reto 1."},
+  {id:"exam_written",name:"Gran reto escrito ⭐",desc:"Escribe palabras y frases en inglés para superar el nivel.",
+   fields:[],
+   build:()=>"¡Vamos a hacer el gran reto escrito de inglés! Hazme 4 ejercicios sencillos y divertidos de escribir con emojis, de uno en uno. Al final califícame con estrellas ⭐ y felicítame. Empieza con el reto 1."},
   {id:"listen",name:"Escucha",desc:"Escucha palabras y frases cortas y elige o escribe lo que oíste.",
    fields:[{id:"topic",label:"Tema",ph:"animales, números…"}],
    build:v=>`Vamos a jugar a escuchar en inglés sobre ${v.topic||"animales"}. En cada reto escribe en español una instrucción corta y divertida SIN decir la palabra (por ejemplo "¿Qué animal escuchas? 🐶 🐱 🐮"), y pon lo que debo escuchar dentro de <<<AUDIO ... >>>: al principio una palabra, luego frases de 3 a 6 palabras. A veces dame opciones con emojis y a veces pídeme que lo escriba. Cuando responda, dime si acerté, muéstrame lo que decía y pasa al siguiente. Guarda mis fallos en "errores" empezando por "Escucha:".`},
@@ -431,6 +497,10 @@ function systemPrompt(){
 Nivel actual del alumno: ${p.level||"desconocido"}, paso ${p.step||1} de 3 (1 = base del nivel, 3 = casi listo para el siguiente). Ajusta TODO (preguntas, vocabulario, velocidad de conversación, gramática) a ese nivel y paso, con retos ligeramente por encima para que avance. Objetivo: ${p.goal||"no indicado"}. Fallos frecuentes: ${errs}.
 ${p.plan?"Resumen de su plan: "+p.plan.slice(0,600):""}
 Reglas: haz una sola pregunta o ejercicio a la vez y espera la respuesta. Respuestas breves y claras. Usa **negritas** para la forma correcta.
+Metodología y progresión académica (Estilo Open English / Centro Electrónico de Idiomas):
+- A1–A2: asentar bases con opción múltiple, oraciones cortas y pronunciación elemental.
+- A partir de B1 (o según avance): dale prioridad a que el alumno FORMULE sus propias respuestas ante situaciones reales (aeropuertos, restaurantes, entrevistas, compras, quejas, trabajo) y realice redacciones progresivas (writing: correos formales/informales, anécdotas, opiniones) usando conectores obligatorios (however, although, in my opinion, furthermore, therefore).
+- En Exámenes Orales y Escritos: califica rigurosamente del 1 al 10 con un boletín estructurado (Speaking / Listening / Gramática / Redacción), indicando qué corregir y si aprueba para subir de paso o nivel.
 Si el mensaje del alumno incluye "🎙 [Respuesta por voz]" o "🎙 [Audio/Voz]" (respuesta hablada): además de evaluar si la opción o respuesta es correcta, dale un consejo amigable sobre pronunciación y fonética según lo que dijo (por ejemplo: sonido de la 's' final, terminaciones -ed, vocales cortas vs largas, etc.).
 Al final de CADA respuesta añade exactamente una línea oculta con este formato JSON (sin texto después):
 <<<DATA {"nivel":"","paso":0,"acierto":null,"errores":[],"vocab":[],"plan":""}>>>
@@ -744,14 +814,24 @@ function sessionSteps(){
   const kid = isKid(), p = state.profile, t = todayData(), did = id => (t.modes[id]||0);
   if(!p.level) return [{id:"test",label:"Prueba de nivel",why:"Para saber por dónde empezar",done:did("test")>=4}];
   const due = dueCards().length;
-  const rot = kid ? ["games","listen","pron","talk"] : ["listen","talk","pron"];
+  const rot = kid ? ["games","listen","pron","talk","situations","writing"] : ["listen","talk","pron","situations","writing"];
   const pick = rot[new Date().getDate() % rot.length];
-  return [
+  const steps = [
     {id:"review",label:kid?"Repaso":"Repaso de tus fallos",why:"5 minutos con lo que más te cuesta",done:did("review")>=3},
     {id:"cards",label:kid?"Mis tarjetas":"Tarjetas",why:due?`${due} ${due===1?"palabra":"palabras"} para hoy`:"Nada pendiente hoy",done:due===0||t.cards>=10},
     {id:"plan",label:p.plan?(kid?"Lección del día":"Lección de tu plan"):"Crea tu plan",why:p.plan?"Sigue donde lo dejaste":"Un plan según tu tiempo y tu objetivo",done:did("plan")>=3},
     {id:pick,label:modes().find(m=>m.id===pick).name,why:"Práctica del día",done:did(pick)>=3}
   ];
+  if(p.history && p.history.length >= 6){
+    const examId = new Date().getDate() % 2 === 0 ? "exam_oral" : "exam_written";
+    steps.push({
+      id: examId,
+      label: kid ? (examId==="exam_oral"?"Gran reto de hablar ⭐":"Gran reto escrito ⭐") : (examId==="exam_oral"?"Examen oral de nivel":"Examen escrito de nivel"),
+      why: "Pon a prueba tu avance para subir de paso",
+      done: did(examId)>=1
+    });
+  }
+  return steps;
 }
 function startStep(s){
   const t = todayData(), m = modes().find(x=>x.id===s.id); if(!m) return;
