@@ -174,10 +174,10 @@ dialog small{color:var(--muted);display:block;margin-bottom:12px}
   <label>Modelo
     <div style="display:flex;gap:6px">
       <select id="sModelPreset" style="flex:1">
-        <option value="gemini-2.5-flash">gemini-2.5-flash (Recomendado, gratis y rápido)</option>
-        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-        <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-        <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+        <option value="gemini-3.5-flash">gemini-3.5-flash (Recomendado, rápido y estable)</option>
+        <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Ultra ligero)</option>
+        <option value="gemini-3.8-flash">gemini-3.8-flash (Modelo principal)</option>
+        <option value="gemini-3.7-flash">gemini-3.7-flash</option>
         <option value="custom">Otro modelo...</option>
       </select>
     </div>
@@ -264,7 +264,7 @@ function daysAway(){
   return t ? Math.floor((Date.now()-t)/86400000) : 0;
 }
 const PROVIDERS = {
-  gemini:{model:"gemini-2.5-flash",help:"Consigue tu clave gratis en aistudio.google.com → Get API key. Modelos recomendados: gemini-2.5-flash o gemini-2.0-flash."},
+  gemini:{model:"gemini-3.5-flash",help:"Consigue tu clave gratis en aistudio.google.com → Get API key. Modelos recomendados: gemini-3.5-flash o gemini-3.1-flash-lite."},
   deepseek:{model:"deepseek-chat",url:"https://api.deepseek.com",help:"Clave en platform.deepseek.com. No es gratis, pero es muy barato (requiere recargar saldo)."},
   custom:{model:"",url:"",help:"Cualquier servicio con API estilo OpenAI (/chat/completions). OpenRouter y Groq ofrecen modelos gratuitos."}
 };
@@ -370,15 +370,15 @@ let current = state.mode || "test";
 let busy = false;
 
 function load(){
-  const base = {settings:{provider:"gemini",key:"",model:PROVIDERS.gemini.model,url:"",autoSpeak:true,voiceEngine:"gemini",ttsKey:"",ttsModel:"gemini-2.5-flash",ttsVoice:"Kore"},
+  const base = {settings:{provider:"gemini",key:"",model:PROVIDERS.gemini.model,url:"",autoSpeak:true,voiceEngine:"gemini",ttsKey:"",ttsModel:"gemini-3.8-flash-lite-tts",ttsVoice:"Kore"},
     profile:{level:"",step:1,history:[],lastActive:0,notice:"",errors:[],vocab:[],plan:"",goal:"",minutes:"",weeks:"",cards:{},days:[],today:null},chats:{},fields:{},mode:"today"};
   try{
     const s = JSON.parse(localStorage.getItem(KEY));
     if(s){
       const loaded = {...base,...s,settings:{...base.settings,...s.settings},profile:{...base.profile,...s.profile}};
-      // Migración automática de modelos inexistentes que bloquean la API
-      if(!loaded.settings.model || loaded.settings.model === "gemini-3.8-flash") loaded.settings.model = "gemini-2.5-flash";
-      if(!loaded.settings.ttsModel || loaded.settings.ttsModel.includes("3.8")) loaded.settings.ttsModel = "gemini-2.5-flash";
+      // Migración automática a gemini-3.5-flash si tiene un modelo que da 404 o 503
+      if(!loaded.settings.model || loaded.settings.model.includes("2.5") || loaded.settings.model.includes("1.5")) loaded.settings.model = "gemini-3.5-flash";
+      if(!loaded.settings.ttsModel || loaded.settings.ttsModel.includes("2.5") || loaded.settings.ttsModel.includes("1.5")) loaded.settings.ttsModel = "gemini-3.8-flash-lite-tts";
       return loaded;
     }
   }catch(e){}
@@ -421,26 +421,42 @@ async function callAI(messages){
   }
   const hist = messages.slice(-30);
   if(s.provider==="gemini"){
-    const model = (s.model || "gemini-2.5-flash").trim();
+    let model = (s.model || "gemini-3.5-flash").trim();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 35000); // 35s timeout
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
+      const payload = JSON.stringify({
+        systemInstruction:{parts:[{text:systemPrompt()}]},
+        contents:hist.map(m=>({role:m.role==="user"?"user":"model",parts:[{text:m.content}]}))
+      });
+      let r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
         method:"POST",
         headers:{"Content-Type":"application/json","x-goog-api-key":s.key.trim()},
         signal: controller.signal,
-        body:JSON.stringify({systemInstruction:{parts:[{text:systemPrompt()}]},
-          contents:hist.map(m=>({role:m.role==="user"?"user":"model",parts:[{text:m.content}]}))})
+        body: payload
       });
+      let d = await r.json();
+      
+      // Si el modelo da 503 (alta demanda) o 404 (no encontrado), reintentar automáticamente con gemini-3.5-flash o gemini-3.1-flash-lite
+      if(!r.ok && (r.status === 503 || r.status === 404) && model !== "gemini-3.1-flash-lite"){
+        const fallback = model === "gemini-3.5-flash" ? "gemini-3.1-flash-lite" : "gemini-3.5-flash";
+        console.warn(`Modelo ${model} no disponible (${r.status}). Auto-reintentando con ${fallback}...`);
+        state.settings.model = fallback;
+        save();
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(fallback)}:generateContent`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json","x-goog-api-key":s.key.trim()},
+          signal: controller.signal,
+          body: payload
+        });
+        d = await r.json();
+      }
+
       clearTimeout(timer);
-      const d = await r.json();
       if(!r.ok){
         const errDetail = d.error?.message || ("Error HTTP " + r.status);
-        if(r.status === 404 || errDetail.toLowerCase().includes("not found")){
-          throw new Error(`El modelo "${model}" no fue encontrado en Google AI Studio. En «Ajustes de IA» selecciona "gemini-2.5-flash" o "gemini-2.0-flash".`);
-        }
         if(r.status === 400 && errDetail.toLowerCase().includes("api key")){
-          throw new Error("Tu clave API de Gemini no es válida. Ve a «Ajustes de IA» y pégala de nuevo desde aistudio.google.com.");
+          throw new Error("Tu clave API de Gemini no es válida. Ve a «Ajustes de IA» y revísala.");
         }
         throw new Error(errDetail);
       }
@@ -448,7 +464,7 @@ async function callAI(messages){
     } catch(err) {
       clearTimeout(timer);
       if(err.name === "AbortError"){
-        throw new Error("Tiempo de espera agotado (35s). Google Gemini no respondió a tiempo. Prueba de nuevo o selecciona gemini-2.5-flash en Ajustes.");
+        throw new Error("Tiempo de espera agotado (35s). La red o Gemini tardó demasiado. Pulsa Reintentar.");
       }
       throw err;
     }
