@@ -90,6 +90,11 @@ input,select,textarea{background:var(--paper);border:1px solid var(--line);borde
 .composer.voice-only #mic.on{background:var(--error);animation:pulse 1s infinite alternate}
 @keyframes pulse{0%{transform:scale(1)}100%{transform:scale(1.02)}}
 .auto{font-size:.8rem;color:var(--muted);display:flex;gap:6px;align-items:center;white-space:nowrap}
+.badges-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0 16px}
+.badge-card{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;background:var(--surface);font-size:.76rem;line-height:1.2}
+.badge-card.unlocked{border-color:var(--ok);background:var(--teal-soft);color:var(--ink)}
+.badge-card b{display:block;font-size:1.4rem;margin-bottom:3px}
+.badge-card.locked{opacity:.4;filter:grayscale(1)}
 
 dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);max-width:560px;width:92%;padding:22px}
 dialog{max-height:90vh;overflow:auto}
@@ -348,6 +353,24 @@ Reglas:
   2) Marca los errores con corrección detallada en español.
   3) Muestra una "Versión nativa pulida" de cómo lo redactaría un angloparlante fluido.
   4) Dame un reto de redacción nuevo. Empieza con el primer ejercicio.`},
+  {id:"shadowing",name:"Técnica Shadowing",desc:"El secreto de los políglotas: escucha frases nativas con ritmo real y repítelas imitando la entonación.",
+   fields:[{id:"theme",label:"Tema o contexto",ph:"viajes, trabajo, expresiones cotidianas..."}],
+   build:v=>`Vamos a entrenar fluidez con la TÉCNICA DE SHADOWING (escuchar e imitar el ritmo de un nativo).
+Tema: ${v.theme||"conversaciones cotidianas y ritmo natural"}.
+Reglas para cada ejercicio:
+1) Pon una frase en inglés con ritmo natural (contracciones, connected speech) dentro de <<<AUDIO ... >>> (longitud según mi nivel: para A1-A2 4-6 palabras; para B1-B2 6-10 palabras).
+2) Escribe en español una explicación breve sobre la entonación, qué palabras se acentúan y cómo se unen los sonidos (por ejemplo: "want to -> wanna" o "check in -> che-kin").
+3) Pon la frase escrita dentro de <<<READ ... >>> para que yo la lea en voz alta con el micrófono imitando el audio exactamente.
+Cuando yo grabe mi voz: evalúa mi ritmo, entonación y naturalidad (del 1 al 10), felicítame y dame la siguiente frase en <<<AUDIO>>> y <<<READ>>>. Empieza con la primera frase.`},
+  {id:"pairs",name:"Pares mínimos (Fonética)",desc:"Diferencia y pronuncia los sonidos más traicioneros para hispanohablantes (ship/sheep, beach/bitch, th, -ed).",
+   fields:[{id:"sound",label:"Sonido a practicar",ph:"ship vs sheep, b vs v, th sorda/sonora, terminación -ed..."}],
+   build:v=>`Vamos a entrenar PARES MÍNIMOS (sonidos que a los hispanohablantes nos cuesta distinguir y pronunciar).
+Sonido solicitado: ${v.sound||"los contrastes vocálicos y consonánticos más difíciles según mi nivel"}.
+Reglas para cada reto:
+1) Explica con un truco anatómico en español muy claro cómo poner la lengua, boca y labios para cada sonido (sin fonética técnica).
+2) Pon un par de palabras en contraste, cada una con su audio en <<<AUDIO palabra1>>> y <<<AUDIO palabra2>>>.
+3) Pon una frase corta que contenga ambos sonidos en <<<READ ... >>> para que yo la grabe en voz alta.
+Cuando escuches mi grabación: dime si pronuncié la diferencia con claridad, dame consejos y pasa al siguiente par. Empieza con el primer par.`},
   {id:"exam_oral",name:"Examen oral",desc:"Evaluación oficial 100% hablada (speaking): 5 situaciones de tu nivel para calificar tu fluidez y pronunciación.",
    fields:[],
    build:(v,p)=>`Vamos a realizar mi EXAMEN ORAL oficial de inglés para mi nivel ${p.level||"B1"}, paso ${p.step||1} de 3 (estilo Open English / Centro Electrónico de Idiomas).
@@ -415,6 +438,12 @@ const KID_MODES = [
   {id:"writing",name:"Escribir historias",desc:"Crea pequeñas historias y cartas cortitas en inglés con emojis.",
    fields:[{id:"topic",label:"Tema",ph:"mi mascota, un viaje mágico, superhéroes..."}],
    build:v=>`Vamos a escribir pequeñas historias en inglés sobre ${v.topic||"mi animal favorito"}. Dame una idea para escribir de 2 a 4 frases en inglés con emojis y 2 palabras clave que deba usar. Cuando te la envíe, felicítame, corrígeme con cariño si algo falló y dame otra idea para escribir.`},
+  {id:"shadowing",name:"Juego del Loro 🦜",desc:"Escucha a un nativo y repite imitando su ritmo y entonación.",
+   fields:[{id:"theme",label:"Tema",ph:"animales, magia, superhéroes..."}],
+   build:v=>`¡Vamos a jugar al loro imitador en inglés! Tema: ${v.theme||"animales"}. Pon una frase divertida de 3 a 5 palabras dentro de <<<AUDIO ... >>> y dentro de <<<READ ... >>>. Cuando la repita, califícame con estrellas ⭐ y dame la siguiente.`},
+  {id:"pairs",name:"Sonidos mágicos ✨",desc:"Adivina y repite palabras con sonidos parecidos.",
+   fields:[],
+   build:()=>"¡Vamos a jugar a los sonidos mágicos en inglés! Dame dos palabras que suenen parecido pero signifiquen cosas distintas con emojis y audios <<<AUDIO>>>. Pídeme que las repita con <<<READ>>> y dame estrellas ⭐."},
   {id:"exam_oral",name:"Gran reto de hablar ⭐",desc:"Demuestra cuánto sabes hablando en inglés para ganar la medalla de oro.",
    fields:[],
    build:()=>"¡Vamos a hacer el gran reto oral de inglés! Hazme 4 retos hablados divertidos con emojis, de uno en uno. Al final dame mi nota con estrellas ⭐ (de 1 a 10) y un diploma con emojis. Empieza con el reto 1."},
@@ -814,7 +843,7 @@ function sessionSteps(){
   const kid = isKid(), p = state.profile, t = todayData(), did = id => (t.modes[id]||0);
   if(!p.level) return [{id:"test",label:"Prueba de nivel",why:"Para saber por dónde empezar",done:did("test")>=4}];
   const due = dueCards().length;
-  const rot = kid ? ["games","listen","pron","talk","situations","writing"] : ["listen","talk","pron","situations","writing"];
+  const rot = kid ? ["games","listen","pron","talk","situations","writing","shadowing","pairs"] : ["listen","talk","pron","situations","writing","shadowing","pairs"];
   const pick = rot[new Date().getDate() % rot.length];
   const steps = [
     {id:"review",label:kid?"Repaso":"Repaso de tus fallos",why:"5 minutos con lo que más te cuesta",done:did("review")>=3},
@@ -1252,12 +1281,25 @@ function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">
 $("openProgress").onclick=()=>{
   const p=state.profile;
   const errs=p.errors.slice().sort((a,b)=>b.count-a.count);
+  const st = streak();
+  const badges = [
+    {icon:"🌟",title:"Diagnóstico",desc:"Nivel medido",unlocked:!!p.level},
+    {icon:"🎯",title:"Nivel B1+",desc:"Base intermedia",unlocked:["B1","B2","C1","C2"].includes(p.level)},
+    {icon:"🔥",title:"En racha",desc:`${st} ${st===1?"día":"días"} seguidos`,unlocked:st>=1},
+    {icon:"🎙️",title:"Voz activa",desc:"Práctica oral",unlocked:!!state.settings.voiceOnly || !!p.history.length},
+    {icon:"📚",title:"Vocabulario",desc:`${p.vocab.length} palabras`,unlocked:p.vocab.length>=5},
+    {icon:"🏆",title:"Exámenes",desc:"Examen oficial",unlocked:(todayData().modes.exam_oral||0)+(todayData().modes.exam_written||0)>0}
+  ];
   $("pBody").innerHTML = `
-    <p><strong>Nivel:</strong> ${p.level||"sin determinar"} ${p.goal?`· <strong>Objetivo:</strong> ${esc(p.goal)}`:""}</p>
+    <p><strong>Nivel:</strong> ${p.level||"sin determinar"} · Paso ${p.step||1} ${p.goal?`· <strong>Objetivo:</strong> ${esc(p.goal)}`:""}</p>
     ${p.plan?`<p><strong>Plan:</strong> ${esc(p.plan)}</p>`:""}
-    <p><strong>Fallos (${errs.length})</strong></p>
+    <p><strong>Logros y Medallas</strong></p>
+    <div class="badges-grid">
+      ${badges.map(b=>`<div class="badge-card ${b.unlocked?"unlocked":"locked"}"><b>${b.icon}</b><strong>${b.title}</strong><div>${b.desc}</div></div>`).join("")}
+    </div>
+    <p><strong>Fallos frecuentes (${errs.length})</strong></p>
     <div class="list">${errs.map(e=>`<div>${esc(e.text)} <span style="color:var(--muted)">×${e.count}</span></div>`).join("")||"<div>Ninguno todavía.</div>"}</div>
-    <p><strong>Vocabulario (${p.vocab.length})</strong></p>
+    <p><strong>Vocabulario guardado (${p.vocab.length})</strong></p>
     <div class="list">${p.vocab.map(v=>`<div>${esc(v)}</div>`).join("")||"<div>Vacío.</div>"}</div>`;
   updateBackupInfo();
   $("progress").showModal();
